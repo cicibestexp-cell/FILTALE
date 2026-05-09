@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Equipment Check</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --surface2: #1e222d;
+    --border: #2a2f3d;
+    --accent: #e8ff4d;
+    --accent-dim: rgba(232, 255, 77, 0.12);
+    --red: #ff4d6d;
+    --red-dim: rgba(255, 77, 109, 0.12);
+    --green: #4dffb0;
+    --green-dim: rgba(77, 255, 176, 0.1);
+    --text: #f0f2f8;
+    --muted: #5a6080;
+    --muted2: #3a3f55;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  header .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  header h1 span { color: var(--accent); }
+
+  .header-bottom {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .progress-wrap {
+    flex: 1;
+    margin-right: 20px;
+  }
+
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .date-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+
+  /* ── LIST ── */
+  .list {
+    padding: 16px 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 12px 8px 4px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 99px 0 0 99px;
+    background: transparent;
+    transition: background 0.2s;
+  }
+
+  .card.ok { border-color: rgba(77, 255, 176, 0.25); background: rgba(77, 255, 176, 0.04); }
+  .card.ok::before { background: var(--green); }
+  .card.broken { border-color: rgba(255, 77, 109, 0.25); background: rgba(255, 77, 109, 0.04); }
+  .card.broken::before { background: var(--red); }
+
+  .card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  .card.ok .card-icon { background: var(--green-dim); border-color: rgba(77,255,176,0.2); }
+  .card.broken .card-icon { background: var(--red-dim); border-color: rgba(255,77,109,0.2); }
+
+  .card-info { flex: 1; min-width: 0; }
+
+  .card-name {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .card-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 99px;
+    letter-spacing: 0.05em;
+    margin-top: 5px;
+    display: inline-block;
+  }
+
+  .card.ok .card-status { background: var(--green-dim); color: var(--green); }
+  .card.broken .card-status { background: var(--red-dim); color: var(--red); }
+
+  .card-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .btn-check {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    font-size: 16px;
+  }
+
+  .btn-check:hover { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+  .btn-check.active { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+  .btn-qr {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    font-size: 16px;
+  }
+
+  .btn-qr:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .card.broken .btn-qr { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+  /* ── SCANNER OVERLAY ── */
+  #scanner-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+  }
+
+  #scanner-overlay.visible { display: flex; }
+
+  .scanner-box {
+    width: min(92vw, 380px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .scanner-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+
+  .scanner-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-align: center;
+  }
+
+  #video-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid var(--accent);
+    background: #000;
+    box-shadow: 0 0 40px rgba(232,255,77,0.15);
+  }
+
+  #video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  #scan-canvas { display: none; }
+
+  .scan-corners {
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+
+  .scan-line {
+    position: absolute;
+    left: 12%; right: 12%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scanLine 2s linear infinite;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  @keyframes scanLine {
+    0% { top: 12%; opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 88%; opacity: 0; }
+  }
+
+  .corner {
+    position: absolute;
+    width: 22px; height: 22px;
+    border-color: var(--accent);
+    border-style: solid;
+  }
+
+  .corner.tl { top: 10px; left: 10px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .corner.tr { top: 10px; right: 10px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+  .corner.bl { bottom: 10px; left: 10px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+  .corner.br { bottom: 10px; right: 10px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+  .scan-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    min-height: 18px;
+  }
+
+  .scan-status.found { color: var(--accent); }
+  .scan-status.error { color: var(--red); }
+
+  .btn-cancel-scan {
+    padding: 12px 28px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-cancel-scan:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+  /* ── REPORT MODAL ── */
+  #report-modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #report-modal.visible { display: flex; }
+
+  .modal-sheet {
+    width: min(100vw, 480px);
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    padding: 28px 24px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: slideUp 0.3s cubic-bezier(0.34, 1.36, 0.64, 1);
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal-drag { width: 40px; height: 4px; background: var(--border); border-radius: 99px; align-self: center; }
+
+  .modal-equip-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .modal-equip-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .modal-equip-meta {}
+
+  .modal-equip-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  .modal-equip-name {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .modal-equip-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .modal-divider { height: 1px; background: var(--border); }
+
+  .field-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .status-selector {
+    display: flex;
+    gap: 8px;
+  }
+
+  .status-opt {
+    flex: 1;
+    padding: 12px 10px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+
+  .status-opt[data-val="ok"].selected {
+    border-color: var(--green); color: var(--green); background: var(--green-dim);
+  }
+
+  .status-opt[data-val="broken"].selected {
+    border-color: var(--red); color: var(--red); background: var(--red-dim);
+  }
+
+  .notes-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.15s;
+    min-height: 80px;
+  }
+
+  .notes-input:focus { border-color: var(--accent); }
+  .notes-input::placeholder { color: var(--muted); }
+
+  .modal-actions { display: flex; gap: 10px; }
+
+  .btn-save {
+    flex: 1;
+    padding: 15px;
+    border-radius: 14px;
+    border: none;
+    background: var(--accent);
+    color: #0d0f14;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: -0.01em;
+  }
+
+  .btn-save:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-save:active { transform: translateY(0); }
+
+  .btn-discard {
+    padding: 15px 20px;
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-discard:hover { border-color: var(--muted2); color: var(--text); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    z-index: 999;
+    white-space: nowrap;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast.green { border-color: rgba(77,255,176,0.4); color: var(--green); }
+  #toast.red { border-color: rgba(255,77,109,0.4); color: var(--red); }
+
+  /* ── SUMMARY BAR ── */
+  .summary {
+    margin: 20px 16px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-around;
+  }
+
+  .sum-item { text-align: center; }
+
+  .sum-val {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  .sum-val.total { color: var(--text); }
+  .sum-val.checked { color: var(--green); }
+  .sum-val.broken { color: var(--red); }
+  .sum-val.pending { color: var(--accent); }
+
+  .sum-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .sum-divider {
+    width: 1px;
+    background: var(--border);
+    align-self: stretch;
+  }
+
+  /* ── QR SHEET BUTTON ── */
+  .btn-qr-sheet {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 16px 0;
+    padding: 13px 18px;
+    background: var(--accent-dim);
+    border: 1.5px solid rgba(232,255,77,0.3);
+    border-radius: 14px;
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    width: calc(100% - 32px);
+    transition: all 0.15s;
+  }
+  .btn-qr-sheet:hover { background: rgba(232,255,77,0.18); }
+  .btn-qr-sheet svg { flex-shrink: 0; }
+  .btn-qr-sheet span { flex: 1; text-align: left; }
+  .btn-qr-sheet .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    background: var(--accent);
+    color: #0d0f14;
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-weight: 500;
+  }
+
+  /* ── QR SHEET OVERLAY ── */
+  #qr-sheet-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 300;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #qr-sheet-overlay.visible { display: flex; }
+
+  .qr-sheet-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+
+  .qr-sheet-header h2 {
+    font-size: 18px;
+    font-weight: 800;
+    flex: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .qr-sheet-header h2 span { color: var(--accent); }
+
+  .btn-close-sheet {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    transition: all 0.15s;
+  }
+  .btn-close-sheet:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+  .btn-print {
+    padding: 9px 16px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(232,255,77,0.35);
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-print:hover { background: rgba(232,255,77,0.2); }
+
+  .qr-sheet-hint {
+    padding: 10px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .qr-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .qr-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.15s;
+  }
+  .qr-card:hover { border-color: var(--accent); }
+
+  .qr-card-icon {
+    font-size: 20px;
+  }
+
+  .qr-canvas-wrap {
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px;
+    width: fit-content;
+  }
+  .qr-canvas-wrap canvas,
+  .qr-canvas-wrap img { display: block; border-radius: 4px; }
+
+  .qr-card-name {
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .qr-card-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border-radius: 6px;
+    padding: 3px 8px;
+  }
+
+  @media print {
+    body > *:not(#qr-sheet-overlay) { display: none !important; }
+    #qr-sheet-overlay { position: static !important; display: block !important; }
+    .qr-sheet-header, .qr-sheet-hint { break-inside: avoid; }
+    .btn-close-sheet, .btn-print { display: none !important; }
+    .qr-grid { display: grid !important; grid-template-columns: repeat(3, 1fr); overflow: visible; }
+    .qr-card { break-inside: avoid; border: 1px solid #ccc; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="label">Staff Inspection</div>
+  <h1>Equipment <span>Check</span></h1>
+  <div class="header-bottom">
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span>Completion</span>
+        <span id="prog-text">0 / 0</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+    <div class="date-badge" id="date-badge"></div>
+  </div>
+</header>
+
+<!-- SUMMARY -->
+<div class="summary">
+  <div class="sum-item"><div class="sum-val total" id="sum-total">0</div><div class="sum-label">Total</div></div>
+  <div class="sum-divider"></div>
+  <div class="sum-item"><div class="sum-val checked" id="sum-ok">0</div><div class="sum-label">OK</div></div>
+  <div class="sum-divider"></div>
+  <div class="sum-item"><div class="sum-val broken" id="sum-broken">0</div><div class="sum-label">Broken</div></div>
+  <div class="sum-divider"></div>
+  <div class="sum-item"><div class="sum-val pending" id="sum-pending">0</div><div class="sum-label">Pending</div></div>
+</div>
+
+<!-- QR SHEET BUTTON -->
+<button class="btn-qr-sheet" onclick="openQRSheet()">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+    <rect x="3" y="14" width="7" height="7" rx="1"/>
+    <path d="M14 14h2v2h-2zM18 14h3M14 18h1M17 18h4M14 21h2M19 21h2"/>
+  </svg>
+  <span>Print QR Code Sheet</span>
+  <div class="badge">12 codes</div>
+</button>
+
+<!-- QR SHEET OVERLAY -->
+<div id="qr-sheet-overlay">
+  <div class="qr-sheet-header">
+    <button class="btn-close-sheet" onclick="closeQRSheet()">✕</button>
+    <h2>QR <span>Codes</span></h2>
+    <button class="btn-print" onclick="window.print()">🖨 Print</button>
+  </div>
+  <div class="qr-sheet-hint">Scan any code with the checklist app · Each code links to that equipment's report</div>
+  <div class="qr-grid" id="qr-grid"></div>
+</div>
+
+<!-- EQUIPMENT LIST -->
+<div class="list" id="equip-list"></div>
+
+<!-- SCANNER OVERLAY -->
+<div id="scanner-overlay">
+  <div class="scanner-box">
+    <div class="scanner-title">QR Scanner</div>
+    <div class="scanner-sub" id="scan-sub">Point camera at equipment QR code</div>
+    <div id="video-wrap">
+      <video id="video" autoplay playsinline muted></video>
+      <div class="scan-corners">
+        <div class="scan-line"></div>
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+      </div>
+    </div>
+    <canvas id="scan-canvas" style="display:none"></canvas>
+    <div class="scan-status" id="scan-status">Initializing camera…</div>
+    <div style="display:flex;gap:10px;width:100%;">
+      <button class="btn-cancel-scan" style="flex:1" onclick="closeScanner()">Cancel</button>
+      <button class="btn-cancel-scan" style="flex:1;border-color:#5a6080;font-size:11px;" onclick="skipScanOpenModal()" id="btn-skip-scan" title="Skip scan and open report manually">Skip Scan</button>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div id="report-modal">
+  <div class="modal-sheet">
+    <div class="modal-drag"></div>
+    <div class="modal-equip-row">
+      <div class="modal-equip-icon" id="modal-icon"></div>
+      <div class="modal-equip-meta">
+        <div class="modal-equip-label">Equipment Found</div>
+        <div class="modal-equip-name" id="modal-name">—</div>
+        <div class="modal-equip-id" id="modal-id">—</div>
+      </div>
+    </div>
+    <div class="modal-divider"></div>
+    <div>
+      <div class="field-label">Condition</div>
+      <div class="status-selector">
+        <div class="status-opt" data-val="ok" onclick="selectStatus('ok')">✓ OK</div>
+        <div class="status-opt" data-val="broken" onclick="selectStatus('broken')">✗ Broken</div>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Notes (optional)</div>
+      <textarea class="notes-input" id="modal-notes" placeholder="Describe the issue…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-discard" onclick="closeModal()">Discard</button>
+      <button class="btn-save" onclick="saveReport()">Save Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const EQUIPMENT = [
+  { id: 'EQ-001', name: 'Fire Extinguisher A', location: 'Lobby', icon: '🧯', category: 'Safety' },
+  { id: 'EQ-002', name: 'First Aid Kit',        location: 'Lobby', icon: '🩺', category: 'Safety' },
+  { id: 'EQ-003', name: 'Emergency Exit Light', location: 'Lobby', icon: '🚨', category: 'Safety' },
+  { id: 'EQ-004', name: 'Desktop PC – Station 1', location: 'Office', icon: '🖥️', category: 'IT' },
+  { id: 'EQ-005', name: 'Printer / Scanner',    location: 'Office', icon: '🖨️', category: 'IT' },
+  { id: 'EQ-006', name: 'Network Router',        location: 'Server Rm', icon: '📡', category: 'IT' },
+  { id: 'EQ-007', name: 'HVAC Unit',             location: 'Rooftop', icon: '❄️', category: 'Facilities' },
+  { id: 'EQ-008', name: 'Elevator Panel',        location: 'Ground Flr', icon: '🛗', category: 'Facilities' },
+  { id: 'EQ-009', name: 'Generator',             location: 'Basement', icon: '⚡', category: 'Facilities' },
+  { id: 'EQ-010', name: 'Security Camera A',     location: 'Entrance', icon: '📹', category: 'Security' },
+  { id: 'EQ-011', name: 'Access Control Panel',  location: 'Entrance', icon: '🔐', category: 'Security' },
+  { id: 'EQ-012', name: 'PA System',             location: 'All Areas', icon: '📢', category: 'Comms' },
+];
+
+// State: { [id]: { status: 'ok' | 'broken' | null, notes: '' } }
+const state = {};
+EQUIPMENT.forEach(e => state[e.id] = { status: null, notes: '' });
+
+let scannerStream = null;
+let scanInterval = null;
+let activeEquipId = null;
+let selectedStatus = null;
+let scanHandled = false;
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.getElementById('date-badge').textContent =
+  new Date().toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' });
+
+renderList();
+updateProgress();
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderList() {
+  const list = document.getElementById('equip-list');
+  list.innerHTML = '';
+
+  const categories = [...new Set(EQUIPMENT.map(e => e.category))];
+
+  categories.forEach(cat => {
+    const items = EQUIPMENT.filter(e => e.category === cat);
+    const lbl = document.createElement('div');
+    lbl.className = 'section-label';
+    lbl.textContent = cat;
+    list.appendChild(lbl);
+
+    items.forEach(eq => renderCard(eq, list));
+  });
+}
+
+function renderCard(eq, container) {
+  const s = state[eq.id];
+  const statusClass = s.status || '';
+
+  const card = document.createElement('div');
+  card.className = `card ${statusClass}`;
+  card.id = `card-${eq.id}`;
+
+  let statusBadge = '';
+  if (s.status === 'ok')     statusBadge = `<div class="card-status">✓ Present & OK</div>`;
+  if (s.status === 'broken') statusBadge = `<div class="card-status">✗ Reported Broken${s.notes ? ' · Note saved' : ''}</div>`;
+
+  card.innerHTML = `
+    <div class="card-icon">${eq.icon}</div>
+    <div class="card-info">
+      <div class="card-name">${eq.name}</div>
+      <div class="card-sub">${eq.location} · ${eq.id}</div>
+      ${statusBadge}
+    </div>
+    <div class="card-actions">
+      <button class="btn-check ${s.status === 'ok' ? 'active' : ''}"
+        title="Mark as OK" onclick="markOk('${eq.id}')">✓</button>
+      <button class="btn-qr"
+        title="Scan QR to report issue" onclick="startScanner('${eq.id}')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <path d="M14 14h2v2h-2zM18 14h3M14 18h1M17 18h4M14 21h2M19 21h2"/>
+        </svg>
+      </button>
+    </div>`;
+
+  container.appendChild(card);
+}
+
+function refreshCard(id) {
+  const card = document.getElementById(`card-${id}`);
+  if (!card) return;
+  const eq = EQUIPMENT.find(e => e.id === id);
+  const parent = card.parentNode;
+  const next = card.nextSibling;
+  card.remove();
+  const tmp = document.createElement('div');
+  renderCard(eq, tmp);
+  parent.insertBefore(tmp.firstChild, next);
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+function markOk(id) {
+  const prev = state[id].status;
+  state[id] = { status: prev === 'ok' ? null : 'ok', notes: '' };
+  refreshCard(id);
+  updateProgress();
+  if (state[id].status === 'ok') showToast('Marked as OK ✓', 'green');
+}
+
+function updateProgress() {
+  const total = EQUIPMENT.length;
+  const ok = Object.values(state).filter(s => s.status === 'ok').length;
+  const broken = Object.values(state).filter(s => s.status === 'broken').length;
+  const checked = ok + broken;
+  const pending = total - checked;
+
+  document.getElementById('prog-fill').style.width = `${(checked / total) * 100}%`;
+  document.getElementById('prog-text').textContent = `${checked} / ${total}`;
+  document.getElementById('sum-total').textContent = total;
+  document.getElementById('sum-ok').textContent = ok;
+  document.getElementById('sum-broken').textContent = broken;
+  document.getElementById('sum-pending').textContent = pending;
+}
+
+// ── SCANNER ───────────────────────────────────────────────────────────────────
+async function startScanner(equipId) {
+  activeEquipId = equipId;
+  scanHandled = false;
+  document.getElementById('scanner-overlay').classList.add('visible');
+  document.getElementById('scan-status').textContent = 'Starting camera…';
+  document.getElementById('scan-status').className = 'scan-status';
+  document.getElementById('scan-sub').textContent = 'Point camera at QR code on the equipment';
+
+  try {
+    // Try rear camera first, fall back to any camera
+    let constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } };
+    try {
+      scannerStream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch {
+      scannerStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    }
+
+    const video = document.getElementById('video');
+    video.srcObject = scannerStream;
+
+    // Wait for video to actually be playing and have dimensions
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = () => {
+        video.play().then(resolve).catch(reject);
+      };
+      video.onerror = reject;
+      setTimeout(reject, 8000); // timeout safety
+    });
+
+    // Give camera a moment to adjust exposure before scanning
+    document.getElementById('scan-status').textContent = 'Camera ready — hold steady over QR code';
+    await new Promise(r => setTimeout(r, 600));
+
+    document.getElementById('scan-status').textContent = 'Scanning…';
+    startScanLoop();
+
+  } catch (err) {
+    console.error('Camera error:', err);
+    document.getElementById('scan-status').textContent = 'Camera unavailable — use Skip Scan';
+    document.getElementById('scan-status').className = 'scan-status error';
+  }
+}
+
+function startScanLoop() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('scan-canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  let frameMiss = 0;
+
+  // Use requestAnimationFrame for tighter loop than setInterval
+  function tick() {
+    if (scanHandled) return;
+    if (!scannerStream) return;
+
+    if (video.readyState < 2 || video.videoWidth === 0) {
+      frameMiss++;
+      scanInterval = requestAnimationFrame(tick);
+      return;
+    }
+
+    // Sample at native resolution for best accuracy
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // Try normal then inverted (handles light-on-dark QR codes on screens)
+    let code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });
+
+    if (code && code.data) {
+      scanHandled = true;
+      document.getElementById('scan-status').textContent = `✓ QR detected!`;
+      document.getElementById('scan-status').className = 'scan-status found';
+      handleQRData(code.data);
+      return;
+    }
+
+    // Keep animating
+    scanInterval = requestAnimationFrame(tick);
+  }
+
+  scanInterval = requestAnimationFrame(tick);
+}
+
+function handleQRData(data) {
+  stopStream();
+  const matched = EQUIPMENT.find(e => data === e.id || data.includes(e.id));
+
+  setTimeout(() => {
+    closeScanner();
+    if (matched) {
+      openModal(matched.id);
+    } else {
+      showToast(`Unknown QR — opening for: ${EQUIPMENT.find(e=>e.id===activeEquipId)?.name || activeEquipId}`, '');
+      openModal(activeEquipId);
+    }
+  }, 350);
+}
+
+function skipScanOpenModal() {
+  scanHandled = true;
+  stopStream();
+  closeScanner();
+  openModal(activeEquipId);
+}
+
+function closeScanner() {
+  cancelAnimationFrame(scanInterval);
+  scanHandled = true;
+  stopStream();
+  document.getElementById('scanner-overlay').classList.remove('visible');
+  document.getElementById('scan-status').textContent = '';
+  const video = document.getElementById('video');
+  video.srcObject = null;
+}
+
+function stopStream() {
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function openModal(id) {
+  const eq = EQUIPMENT.find(e => e.id === id);
+  if (!eq) return;
+  activeEquipId = id;
+  selectedStatus = state[id].status || 'broken';
+
+  document.getElementById('modal-icon').textContent = eq.icon;
+  document.getElementById('modal-name').textContent = eq.name;
+  document.getElementById('modal-id').textContent = `${eq.id} · ${eq.location}`;
+  document.getElementById('modal-notes').value = state[id].notes || '';
+
+  document.querySelectorAll('.status-opt').forEach(o => o.classList.remove('selected'));
+  document.querySelector(`.status-opt[data-val="${selectedStatus}"]`)?.classList.add('selected');
+
+  document.getElementById('report-modal').classList.add('visible');
+}
+
+function selectStatus(val) {
+  selectedStatus = val;
+  document.querySelectorAll('.status-opt').forEach(o => o.classList.remove('selected'));
+  document.querySelector(`.status-opt[data-val="${val}"]`).classList.add('selected');
+}
+
+function saveReport() {
+  if (!selectedStatus) { showToast('Select a condition first', ''); return; }
+  const notes = document.getElementById('modal-notes').value.trim();
+  state[activeEquipId] = { status: selectedStatus, notes };
+  refreshCard(activeEquipId);
+  updateProgress();
+  closeModal();
+  const eq = EQUIPMENT.find(e => e.id === activeEquipId);
+  if (selectedStatus === 'broken') {
+    showToast(`${eq.name} reported broken`, 'red');
+  } else {
+    showToast(`${eq.name} marked OK ✓`, 'green');
+  }
+}
+
+function closeModal() {
+  document.getElementById('report-modal').classList.remove('visible');
+  selectedStatus = null;
+  activeEquipId = null;
+}
+
+// Close modal on backdrop click
+document.getElementById('report-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 2600);
+}
+
+// ── QR SHEET ──────────────────────────────────────────────────────────────────
+let qrGenerated = false;
+
+function openQRSheet() {
+  document.getElementById('qr-sheet-overlay').classList.add('visible');
+  if (!qrGenerated) generateQRCodes();
+}
+
+function closeQRSheet() {
+  document.getElementById('qr-sheet-overlay').classList.remove('visible');
+}
+
+function generateQRCodes() {
+  const grid = document.getElementById('qr-grid');
+  grid.innerHTML = '';
+
+  EQUIPMENT.forEach(eq => {
+    const card = document.createElement('div');
+    card.className = 'qr-card';
+
+    const iconEl = document.createElement('div');
+    iconEl.className = 'qr-card-icon';
+    iconEl.textContent = eq.icon;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'qr-canvas-wrap';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'qr-card-name';
+    nameEl.textContent = eq.name;
+
+    const idEl = document.createElement('div');
+    idEl.className = 'qr-card-id';
+    idEl.textContent = eq.id;
+
+    card.appendChild(iconEl);
+    card.appendChild(wrap);
+    card.appendChild(nameEl);
+    card.appendChild(idEl);
+    grid.appendChild(card);
+
+    // Generate QR — encodes the equipment ID so the scanner can match it
+    new QRCode(wrap, {
+      text: eq.id,
+      width: 120,
+      height: 120,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  });
+
+  qrGenerated = true;
+}
+
+</script>
+</body>
+</html>
